@@ -1,0 +1,64 @@
+# Dev stack. Separate from the production compose file at the repo root:
+# here the app container is a long-lived shell with the source bind-mounted,
+# not a built image.
+
+services:
+  app:
+    image: mcr.microsoft.com/devcontainers/typescript-node:22-bookworm
+    volumes:
+      - ../..:/workspaces:cached
+      - ..:/workspace:cached
+      # Keep node_modules in a volume so the host filesystem (and native
+      # builds) do not fight with the container.
+      - node_modules:/workspace/node_modules
+    command: sleep infinity
+    environment:
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_NAME: exchangex
+      DB_USER: exchangex
+      DB_PASSWORD: exchangex
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      NEXT_TELEMETRY_DISABLED: "1"
+    depends_on:
+      mysql: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_general_ci
+    environment:
+      MYSQL_DATABASE: exchangex
+      MYSQL_USER: exchangex
+      MYSQL_PASSWORD: exchangex
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - mysql:/var/lib/mysql
+      # Loads on first boot only, while the volume is empty.
+      - ../db/initial.sql:/docker-entrypoint-initdb.d/01-initial.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "--silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  mysql:
+  redis:
+  node_modules:

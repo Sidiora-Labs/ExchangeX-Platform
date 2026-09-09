@@ -1,0 +1,39 @@
+name: Feature request
+description: Suggest a capability or improvement
+labels: [enhancement, needs-triage]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you unable to do today? Describe the situation, not the solution.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Trading (spot / futures / binary)
+        - Wallets & transactions
+        - Admin panel
+        - Authentication / KYC
+        - Extensions
+        - Frontend / UI
+        - Deployment / Docker
+        - Other
+    validations:
+      required: true

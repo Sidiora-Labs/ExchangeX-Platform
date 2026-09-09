@@ -1,0 +1,43 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    versioning-strategy: increase-if-necessary
+    labels: [dependencies]
+    groups:
+      # Framework upgrades land together or not at all.
+      react:
+        patterns: ["react", "react-dom", "@types/react", "@types/react-dom"]
+      next:
+        patterns: ["next", "eslint-config-next", "next-*"]
+      tailwind:
+        patterns: ["tailwindcss", "@tailwindcss/*", "prettier-plugin-tailwindcss"]
+      eslint:
+        patterns: ["eslint", "eslint-*", "@typescript-eslint/*"]
+      jest:
+        patterns: ["jest", "ts-jest", "@types/jest"]
+      dev-minor-patch:
+        dependency-type: development
+        update-types: [minor, patch]
+    ignore:
+      # Pinned deliberately in package.json > pnpm.overrides.
+      - dependency-name: "wagmi"
+      - dependency-name: "@metamask/sdk"
+      # Native addon pinned to a known-good tag.
+      - dependency-name: "uWebSockets.js"
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly
+    labels: [dependencies, ci]
+
+  - package-ecosystem: docker
+    directory: "/"
+    schedule:
+      interval: monthly
+    labels: [dependencies, docker]

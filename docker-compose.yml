@@ -1,0 +1,109 @@
+# ExchangeX — local/self-hosted stack.
+#
+#   cp .env.example .env   &&   edit it
+#   docker compose up -d
+#
+# Frontend  http://localhost:3000
+# Backend   http://localhost:4000   (API docs at /api/docs/v1)
+#
+# The same image runs both processes; only the command differs.
+
+name: exchangex
+
+x-app: &app
+  build:
+    context: .
+    dockerfile: Dockerfile
+    args:
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
+      NEXT_PUBLIC_SITE_NAME: ${NEXT_PUBLIC_SITE_NAME:-ExchangeX}
+      NEXT_PUBLIC_BACKEND_PORT: ${NEXT_PUBLIC_BACKEND_PORT:-4000}
+      NEXT_PUBLIC_FRONTEND_PORT: ${NEXT_PUBLIC_FRONTEND_PORT:-3000}
+      NEXT_PUBLIC_DEFAULT_LANGUAGE: ${NEXT_PUBLIC_DEFAULT_LANGUAGE:-en}
+      NEXT_PUBLIC_DEFAULT_THEME: ${NEXT_PUBLIC_DEFAULT_THEME:-dark}
+  image: exchangex:local
+  env_file: [.env]
+  environment:
+    DB_HOST: mysql
+    DB_PORT: "3306"
+    REDIS_HOST: redis
+    REDIS_PORT: "6379"
+  restart: unless-stopped
+  volumes:
+    - uploads:/app/public/uploads
+    - logs:/app/logs
+
+services:
+  backend:
+    <<: *app
+    command: ["pnpm", "start:backend"]
+    environment:
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      HEALTHCHECK_PORT: "4000"
+    ports:
+      - "${NEXT_PUBLIC_BACKEND_PORT:-4000}:4000"
+    depends_on:
+      mysql: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  frontend:
+    <<: *app
+    command: ["pnpm", "start:frontend"]
+    environment:
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      HEALTHCHECK_PORT: "3000"
+      PORT: "3000"
+    ports:
+      - "${NEXT_PUBLIC_FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      backend: { condition: service_started }
+
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_general_ci
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-exchangex}
+      MYSQL_USER: ${DB_USER:-exchangex}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-exchangex}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-exchangex-root}
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    volumes:
+      - mysql:/var/lib/mysql
+      # Loaded only when the data volume is empty, i.e. first boot.
+      - ./db/initial.sql:/docker-entrypoint-initdb.d/01-initial.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "--silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  mysql:
+  redis:
+  uploads:
+  logs:

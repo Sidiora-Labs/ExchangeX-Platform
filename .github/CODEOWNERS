@@ -1,0 +1,14 @@
+# Default owner for everything not matched below.
+*                       @your-org/maintainers
+
+# Money paths — these want a second pair of eyes.
+/backend/api/finance/   @your-org/maintainers
+/backend/api/exchange/  @your-org/maintainers
+/backend/blockchains/   @your-org/maintainers
+/models/                @your-org/maintainers
+
+# Build, CI, and deployment.
+/.github/               @your-org/maintainers
+/Dockerfile             @your-org/maintainers
+/docker-compose.yml     @your-org/maintainers
+/db/                    @your-org/maintainers
